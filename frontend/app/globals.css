@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white no-underline transition-colors hover:bg-brand-dark border-0 cursor-pointer;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 no-underline transition-colors hover:bg-gray-300 border-0 cursor-pointer;
+  }
+  .btn-danger {
+    @apply inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white no-underline transition-colors hover:bg-red-700 border-0 cursor-pointer;
+  }
+  .form-input {
+    @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:outline focus:outline-2 focus:outline-blue-500;
+  }
+  .nav-link {
+    @apply flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-gray-700 no-underline transition-colors hover:bg-gray-100;
+  }
+  .nav-link.active {
+    @apply bg-blue-50;
+  }
+  .nav-link.active .nav-label {
+    @apply text-brand font-medium;
+  }
+  .nav-section {
+    @apply block px-3 py-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-gray-400;
+  }
+  .page-header {
+    @apply mb-6 flex flex-wrap items-center justify-between gap-3;
+  }
+  .page-header h1 {
+    @apply m-0 text-2xl font-bold text-gray-800;
+  }
+  .stat-grid {
+    @apply mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3;
+  }
+  .table-scroll {
+    @apply overflow-x-auto;
+  }
+}
