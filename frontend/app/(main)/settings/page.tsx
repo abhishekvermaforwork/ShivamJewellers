@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import { fetchMe } from '@/services/auth.service';
 import { api, getApiErrorMessage } from '@/services/api';
 
 export default function SettingsPage() {
+  const { mutate } = useSWRConfig();
+  const { data: me, isLoading } = useSWR('auth-me', fetchMe, { dedupingInterval: 60_000 });
+
   const [businessName, setBusinessName] = useState('');
   const [invoicePrefix, setInvoicePrefix] = useState('INV');
   const [address, setAddress] = useState('');
@@ -14,34 +18,21 @@ export default function SettingsPage() {
   const [bankDetails, setBankDetails] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const me = await fetchMe();
-        const p = me.businessProfile as Record<string, string> | null;
-        if (!cancelled && p) {
-          setBusinessName(p.businessName || '');
-          setInvoicePrefix(p.invoicePrefix || 'INV');
-          setAddress(p.address || '');
-          setPhone(p.phone || '');
-          setEmail(p.email || '');
-          setTaxNumber(p.taxNumber || '');
-          setBankDetails(p.bankDetails || '');
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const p = me?.businessProfile as Record<string, string> | null | undefined;
+    if (!p || hydrated) return;
+    setBusinessName(p.businessName || '');
+    setInvoicePrefix(p.invoicePrefix || 'INV');
+    setAddress(p.address || '');
+    setPhone(p.phone || '');
+    setEmail(p.email || '');
+    setTaxNumber(p.taxNumber || '');
+    setBankDetails(p.bankDetails || '');
+    setHydrated(true);
+  }, [me, hydrated]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,6 +49,7 @@ export default function SettingsPage() {
         taxNumber,
         bankDetails,
       });
+      await mutate('auth-me');
       setMessage('Saved successfully.');
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -66,7 +58,7 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
+  if (isLoading && !me) return <p className="text-gray-500">Loading…</p>;
 
   return (
     <>

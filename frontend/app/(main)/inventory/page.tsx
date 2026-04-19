@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, getApiErrorMessage } from '@/services/api';
+import useSWR from 'swr';
+import { fetchInventoryCategories } from '@/services/inventory.service';
+import { getApiErrorMessage } from '@/services/api';
 
 type Cat = {
   _id: string;
@@ -17,38 +18,14 @@ type Cat = {
 };
 
 export default function InventoryPage() {
-  const [categories, setCategories] = useState<Cat[]>([]);
-  const [totals, setTotals] = useState({ totalGold: 0, totalSilver: 0 });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR('inventory-categories', fetchInventoryCategories, {
+    dedupingInterval: 20_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get<{
-          success: boolean;
-          data: { categories: Cat[]; totalGold: number; totalSilver: number };
-        }>('/inventory/categories');
-
-        if (!cancelled) {
-          setCategories(data.data.categories);
-          setTotals({
-            totalGold: data.data.totalGold,
-            totalSilver: data.data.totalSilver,
-          });
-        }
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const categories = (data?.categories ?? []) as Cat[];
+  const totals = data
+    ? { totalGold: data.totalGold, totalSilver: data.totalSilver }
+    : { totalGold: 0, totalSilver: 0 };
 
   return (
     <>
@@ -99,10 +76,10 @@ export default function InventoryPage() {
       </div>
 
       {/* Error */}
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {error ? <p className="mb-4 text-red-600">{getApiErrorMessage(error)}</p> : null}
 
       {/* Loading */}
-      {loading ? (
+      {isLoading && !data ? (
         <p className="text-gray-500">Loading…</p>
       ) : categories.length === 0 ? (
         <div className="bg-white p-10 border rounded-xl text-center text-gray-400">

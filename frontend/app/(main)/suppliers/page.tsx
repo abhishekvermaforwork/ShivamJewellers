@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, getApiErrorMessage } from '@/services/api';
+import useSWR from 'swr';
+import { fetchSuppliersList, type SupplierRow } from '@/services/suppliers.service';
+import { getApiErrorMessage } from '@/services/api';
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
@@ -10,45 +11,23 @@ function formatMoney(n: number) {
   );
 }
 
-type Sup = {
-  _id: string;
-  name: string;
-  totalPurchased?: number;
-  totalPending?: number;
-};
-
 export default function SuppliersPage() {
-  const [items, setItems] = useState<Sup[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR('suppliers-list', fetchSuppliersList, {
+    dedupingInterval: 20_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get<{ success: boolean; data: Sup[] }>('/suppliers');
-        if (!cancelled) setItems(data.data);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const items = data ?? [];
 
   return (
     <>
       <div className="page-header">
         <h1>Suppliers</h1>
-        <Link href="/suppliers/new" className="btn-primary">
+        <Link href="/suppliers/new" className="btn-primary" prefetch>
           Add supplier
         </Link>
       </div>
-      {error ? <p className="text-red-600">{error}</p> : null}
-      {loading ? (
+      {error ? <p className="text-red-600">{getApiErrorMessage(error)}</p> : null}
+      {isLoading && !data ? (
         <p className="text-gray-500">Loading…</p>
       ) : (
         <div className="table-scroll rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -61,7 +40,7 @@ export default function SuppliersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {items.map((s) => (
+              {items.map((s: SupplierRow) => (
                 <tr key={s._id}>
                   <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
                   <td className="px-4 py-3 text-right">{formatMoney(s.totalPurchased ?? 0)}</td>

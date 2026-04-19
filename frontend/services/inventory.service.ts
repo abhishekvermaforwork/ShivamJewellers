@@ -1,5 +1,18 @@
 import { api, getApiErrorMessage } from './api';
 
+export type InventoryCategoriesPayload = {
+  categories: Array<Record<string, unknown>>;
+  totalGold: number;
+  totalSilver: number;
+};
+
+export async function fetchInventoryCategories(): Promise<InventoryCategoriesPayload> {
+  const { data } = await api.get<{ success: boolean; data: InventoryCategoriesPayload }>(
+    '/inventory/categories',
+  );
+  return data.data;
+}
+
 export type CategoryPayload = {
   name: string;
   code: string;

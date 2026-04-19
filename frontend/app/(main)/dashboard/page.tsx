@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { fetchDashboard, type DashboardData } from '@/services/dashboard.service';
+import useSWR from 'swr';
+import { fetchDashboard } from '@/services/dashboard.service';
 import { getApiErrorMessage } from '@/services/api';
 
 function formatMoney(n: number) {
@@ -12,32 +12,15 @@ function formatMoney(n: number) {
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR('dashboard-summary', fetchDashboard, {
+    dedupingInterval: 30_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const d = await fetchDashboard();
-        if (!cancelled) setData(d);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) {
+  if (isLoading && !data) {
     return <p className="text-gray-500">Loading dashboard…</p>;
   }
   if (error || !data) {
-    return <p className="text-red-600">{error || 'Failed to load'}</p>;
+    return <p className="text-red-600">{error ? getApiErrorMessage(error) : 'Failed to load'}</p>;
   }
 
   return (
@@ -45,7 +28,7 @@ export default function DashboardPage() {
       <div className="page-header">
         <h1>Dashboard</h1>
         <div className="action-bar">
-          <Link href="/invoices" className="btn-primary">
+          <Link href="/invoices" className="btn-primary" prefetch>
             <i className="fas fa-plus mr-2" />
             New invoice
           </Link>

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import useSWR from 'swr';
 import { fetchMe } from '@/services/auth.service';
 import { clearSession } from '@/lib/session';
 import type { BusinessProfile } from '@/types/user';
@@ -65,28 +66,13 @@ function NavBlock({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: me } = useSWR('auth-me', fetchMe, { dedupingInterval: 60_000 });
+  const profile = (me?.businessProfile ?? null) as BusinessProfile | null;
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebar = useCallback(() => setSidebarOpen((o) => !o), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const me = await fetchMe();
-        if (!cancelled && me.businessProfile) {
-          setProfile(me.businessProfile as BusinessProfile);
-        }
-      } catch {
-        /* unauthenticated handled by middleware */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function logout() {
     clearSession();

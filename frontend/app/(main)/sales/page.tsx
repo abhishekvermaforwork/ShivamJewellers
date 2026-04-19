@@ -1,33 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 import { fetchSalesReport } from '@/services/sales.service';
 import { getApiErrorMessage } from '@/services/api';
 
 export default function SalesPage() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchSalesReport>> | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR('sales-report', fetchSalesReport, {
+    dedupingInterval: 30_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const d = await fetchSalesReport();
-        if (!cancelled) setData(d);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) return <p className="text-gray-500">Loading…</p>;
-  if (error || !data) return <p className="text-red-600">{error || 'Error'}</p>;
+  if (isLoading && !data) return <p className="text-gray-500">Loading…</p>;
+  if (error || !data) return <p className="text-red-600">{error ? getApiErrorMessage(error) : 'Error'}</p>;
 
   return (
     <>

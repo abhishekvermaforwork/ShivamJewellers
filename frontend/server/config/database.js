@@ -10,9 +10,15 @@ export async function connectDatabase() {
     return cached.conn;
   }
   mongoose.set('strictQuery', true);
-  const conn = await mongoose.connect(env.mongoUri);
+  const conn = await mongoose.connect(env.mongoUri, {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 10_000,
+    socketTimeoutMS: 45_000,
+  });
   cached = { conn };
   global.mongoose = cached;
-  logger.info('MongoDB connected');
+  if (env.nodeEnv !== 'production') {
+    logger.info('MongoDB connected');
+  }
   return conn;
 }

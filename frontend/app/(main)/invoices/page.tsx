@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 import { fetchInvoices } from '@/services/invoices.service';
 import { getApiErrorMessage } from '@/services/api';
 
@@ -23,37 +23,22 @@ type Inv = {
 };
 
 export default function InvoicesPage() {
-  const [items, setItems] = useState<Inv[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR('invoices-list', () => fetchInvoices(), {
+    dedupingInterval: 15_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetchInvoices();
-        if (!cancelled) setItems(res.items as Inv[]);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const items = (data?.items ?? []) as Inv[];
 
   return (
     <>
       <div className="page-header">
         <h1>Invoices</h1>
-        <Link href="/invoices/new" className="btn-primary">
+        <Link href="/invoices/new" className="btn-primary" prefetch>
           New invoice
         </Link>
       </div>
-      {error ? <p className="text-red-600">{error}</p> : null}
-      {loading ? (
+      {error ? <p className="text-red-600">{getApiErrorMessage(error)}</p> : null}
+      {isLoading && !data ? (
         <p className="text-gray-500">Loading…</p>
       ) : (
         <div className="table-scroll rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -70,7 +55,7 @@ export default function InvoicesPage() {
               {items.map((inv) => (
                 <tr key={inv._id}>
                   <td className="px-4 py-3 font-medium">
-                    <Link href={`/invoices/${inv._id}`} className="text-brand no-underline hover:underline">
+                    <Link href={`/invoices/${inv._id}`} className="text-brand no-underline hover:underline" prefetch>
                       {inv.invoiceNumber}
                     </Link>
                   </td>

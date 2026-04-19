@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 import { api, getApiErrorMessage } from '@/services/api';
 
 function formatMoney(n: number) {
@@ -17,35 +17,23 @@ type Row = {
   invoice?: { invoiceNumber?: string };
 };
 
-export default function PaymentsPage() {
-  const [items, setItems] = useState<Row[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+async function fetchPaymentHistory(): Promise<Row[]> {
+  const { data } = await api.get<{ success: boolean; data: { items: Row[] } }>('/payments/history');
+  return data.data.items;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get<{ success: boolean; data: { items: Row[] } }>('/payments/history');
-        if (!cancelled) setItems(data.data.items);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export default function PaymentsPage() {
+  const { data: items, error, isLoading } = useSWR('payments-history', fetchPaymentHistory, {
+    dedupingInterval: 20_000,
+  });
 
   return (
     <>
       <div className="page-header">
         <h1>Payments</h1>
       </div>
-      {error ? <p className="text-red-600">{error}</p> : null}
-      {loading ? (
+      {error ? <p className="text-red-600">{getApiErrorMessage(error)}</p> : null}
+      {isLoading && !items ? (
         <p className="text-gray-500">Loading…</p>
       ) : (
         <div className="table-scroll rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -59,14 +47,14 @@ export default function PaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {items.map((p) => (
-                <tr key={p._id}>
-                  <td className="px-4 py-3">{p.invoice?.invoiceNumber ?? '—'}</td>
+              {(items ?? []).map((row) => (
+                <tr key={row._id}>
+                  <td className="px-4 py-3 font-medium">{row.invoice?.invoiceNumber ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600">
-                    {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN') : '—'}
+                    {row.paymentDate ? new Date(row.paymentDate).toLocaleString('en-IN') : '—'}
                   </td>
-                  <td className="px-4 py-3 capitalize">{p.paymentMethod?.replace('_', ' ')}</td>
-                  <td className="px-4 py-3 text-right font-medium">{formatMoney(p.amountPaid)}</td>
+                  <td className="px-4 py-3 capitalize text-gray-600">{row.paymentMethod}</td>
+                  <td className="px-4 py-3 text-right">{formatMoney(row.amountPaid)}</td>
                 </tr>
               ))}
             </tbody>

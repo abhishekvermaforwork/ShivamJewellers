@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
 import { fetchClients, type ClientRow } from '@/services/clients.service';
 import { getApiErrorMessage } from '@/services/api';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
@@ -13,39 +15,27 @@ function formatMoney(n: number) {
 
 export default function ClientsPage() {
   const [q, setQ] = useState('');
-  const [items, setItems] = useState<ClientRow[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const debouncedQ = useDebouncedValue(q.trim(), 350);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await fetchClients(q || undefined);
-        if (!cancelled) setItems(res.items);
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [q]);
+  const { data, error, isLoading, isValidating } = useSWR(
+    ['clients', debouncedQ],
+    () => fetchClients(debouncedQ || undefined),
+    { dedupingInterval: 10_000, keepPreviousData: true },
+  );
+
+  const items = data?.items ?? [];
 
   return (
     <>
       <div className="page-header">
         <h1>Clients</h1>
-        <Link href="/clients/new" className="btn-primary">
+        <Link href="/clients/new" className="btn-primary" prefetch>
           <i className="fas fa-plus mr-2" />
           Add client
         </Link>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <input
           type="search"
           placeholder="Search by name…"
@@ -53,10 +43,11 @@ export default function ClientsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+        {isValidating ? <span className="text-xs text-gray-400">Updating…</span> : null}
       </div>
 
-      {error ? <p className="text-red-600">{error}</p> : null}
-      {loading ? (
+      {error ? <p className="text-red-600">{getApiErrorMessage(error)}</p> : null}
+      {isLoading && !data ? (
         <p className="text-gray-500">Loading…</p>
       ) : (
         <div className="table-scroll rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -69,10 +60,10 @@ export default function ClientsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {items.map((c) => (
+              {items.map((c: ClientRow) => (
                 <tr key={c._id}>
                   <td className="px-4 py-3 font-medium text-gray-900">
-                    <Link href={`/clients/${c._id}`} className="text-brand no-underline hover:underline">
+                    <Link href={`/clients/${c._id}`} className="text-brand no-underline hover:underline" prefetch>
                       {c.name}
                     </Link>
                   </td>

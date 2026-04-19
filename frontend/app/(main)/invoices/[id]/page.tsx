@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { api, getApiErrorMessage } from '@/services/api';
-import { downloadInvoicePdf } from '@/services/invoices.service';
+import useSWR from 'swr';
+import { getApiErrorMessage } from '@/services/api';
+import { downloadInvoicePdf, fetchInvoice } from '@/services/invoices.service';
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(
@@ -16,37 +17,17 @@ function formatMoney(n: number) {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const id = String(params.id);
-  const [invoice, setInvoice] = useState<Record<string, unknown> | null>(null);
-  const [lineItems, setLineItems] = useState<Record<string, unknown>[]>([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await api.get<{
-          success: boolean;
-          data: { invoice: Record<string, unknown>; lineItems: Record<string, unknown>[] };
-        }>(`/invoices/${id}`);
-        if (!cancelled) {
-          setInvoice(data.data.invoice);
-          setLineItems(data.data.lineItems);
-        }
-      } catch (e) {
-        if (!cancelled) setError(getApiErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+  const { data, error, isLoading } = useSWR(id ? ['invoice', id] : null, () => fetchInvoice(id), {
+    dedupingInterval: 10_000,
+  });
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
-  if (error || !invoice) return <p className="text-red-600">{error || 'Not found'}</p>;
+  const invoice = data?.invoice as Record<string, unknown> | undefined;
+  const lineItems = (data?.lineItems ?? []) as Record<string, unknown>[];
+
+  if (isLoading && !data) return <p className="text-gray-500">Loading…</p>;
+  if (error || !invoice) return <p className="text-red-600">{error ? getApiErrorMessage(error) : 'Not found'}</p>;
 
   return (
     <>
@@ -72,10 +53,10 @@ export default function InvoiceDetailPage() {
           >
             {pdfLoading ? 'Preparing…' : 'Download PDF'}
           </button>
-          <Link href={`/invoices/${id}/edit`} className="btn-primary">
+          <Link href={`/invoices/${id}/edit`} className="btn-primary" prefetch>
             Edit
           </Link>
-          <Link href="/invoices" className="btn-secondary">
+          <Link href="/invoices" className="btn-secondary" prefetch>
             Back
           </Link>
         </div>

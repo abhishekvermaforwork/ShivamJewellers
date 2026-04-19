@@ -1,5 +1,17 @@
 import { api, getApiErrorMessage } from './api';
 
+export type SupplierRow = {
+  _id: string;
+  name: string;
+  totalPurchased?: number;
+  totalPending?: number;
+};
+
+export async function fetchSuppliersList(): Promise<SupplierRow[]> {
+  const { data } = await api.get<{ success: boolean; data: SupplierRow[] }>('/suppliers');
+  return data.data;
+}
+
 export type SupplierPayload = {
   name: string;
   phone?: string;
