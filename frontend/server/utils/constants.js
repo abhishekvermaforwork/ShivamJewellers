@@ -18,4 +18,4 @@ export const METAL_TYPE = ['gold', 'silver'];
 
 export const ITEM_STATUS = ['in_stock', 'sold'];
 
-export const PAYMENT_METHOD = ['bank_transfer', 'cash', 'cheque', 'upi', 'other', 'stripe'];
+export const PAYMENT_METHOD = ['bank_transfer', 'cash', 'cheque', 'upi', 'other'];

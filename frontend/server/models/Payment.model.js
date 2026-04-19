@@ -8,7 +8,6 @@ const paymentSchema = new mongoose.Schema(
     paymentDate: { type: Date, default: Date.now },
     paymentMethod: { type: String, enum: PAYMENT_METHOD, default: 'other' },
     notes: { type: String, default: '' },
-    stripePaymentIntentId: { type: String, default: '' },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

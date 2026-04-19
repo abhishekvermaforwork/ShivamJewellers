@@ -126,7 +126,6 @@ export const paymentCreateSchema = Joi.object({
     'cheque',
     'upi',
     'other',
-    'stripe',
   ),
   notes: Joi.string().allow(''),
 });
