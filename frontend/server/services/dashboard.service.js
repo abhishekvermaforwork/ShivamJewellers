@@ -1,12 +1,17 @@
 import { Invoice } from '../models/Invoice.model.js';
 import { Payment } from '../models/Payment.model.js';
 
-async function amountPaidSum(invoiceId) {
-  const result = await Payment.aggregate([
-    { $match: { invoice: invoiceId } },
-    { $group: { _id: null, t: { $sum: '$amountPaid' } } },
+async function paidTotalsByInvoice(invoiceIds) {
+  if (!invoiceIds.length) return new Map();
+  const rows = await Payment.aggregate([
+    { $match: { invoice: { $in: invoiceIds } } },
+    { $group: { _id: '$invoice', t: { $sum: '$amountPaid' } } },
   ]);
-  return result[0]?.t ?? 0;
+  const totals = new Map();
+  for (const row of rows) {
+    totals.set(String(row._id), row.t ?? 0);
+  }
+  return totals;
 }
 
 function displayName(inv) {
@@ -57,11 +62,13 @@ export async function getDashboard(userId) {
     .lean();
 
   const overdueInvoices = await Invoice.find({ user: userId, status: 'overdue' }).populate('client').lean();
+  const invoiceIds = [...outstandingInvoices, ...overdueInvoices].map((inv) => inv._id);
+  const paidTotals = await paidTotalsByInvoice(invoiceIds);
 
   let totalOutstanding = 0;
   const obClients = new Map();
   for (const inv of outstandingInvoices) {
-    const paid = await amountPaidSum(inv._id);
+    const paid = paidTotals.get(String(inv._id)) ?? 0;
     const due = Math.max(0, inv.total - paid);
     totalOutstanding += due;
     const name = displayName(inv);
@@ -71,7 +78,7 @@ export async function getDashboard(userId) {
   let totalOverdue = 0;
   const odClients = new Map();
   for (const inv of overdueInvoices) {
-    const paid = await amountPaidSum(inv._id);
+    const paid = paidTotals.get(String(inv._id)) ?? 0;
     const due = Math.max(0, inv.total - paid);
     totalOverdue += due;
     const name = displayName(inv);

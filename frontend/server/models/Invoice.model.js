@@ -47,5 +47,7 @@ const invoiceSchema = new mongoose.Schema(
 
 invoiceSchema.index({ user: 1, createdAt: -1 });
 invoiceSchema.index({ user: 1, issueDate: -1 });
+invoiceSchema.index({ user: 1, status: 1 });
+invoiceSchema.index({ user: 1, status: 1, dueDate: 1 });
 
 export const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);

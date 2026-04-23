@@ -1,10 +1,23 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'InvoiceHub',
-  description: 'Invoicing and inventory for jewellers',
+  title: {
+    default: 'InvoiceHub — Jewellery Business Management',
+    template: '%s | InvoiceHub',
+  },
+  description:
+    'Invoicing, inventory, payments, and supplier management for jewellers. Built for Om Shivam Jewellers.',
+  manifest: '/manifest.json',
+  icons: { icon: '/favicon.ico' },
+  robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

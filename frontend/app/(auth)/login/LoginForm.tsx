@@ -24,7 +24,6 @@ export function LoginForm() {
       const { token } = await login(username, password);
       persistSession(token);
       router.push(from.startsWith('/') ? from : '/dashboard');
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

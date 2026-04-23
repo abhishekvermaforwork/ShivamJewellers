@@ -11,8 +11,10 @@ const baseURL =
 export const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 30_000, // 30s — fail fast instead of hanging
 });
 
+// ─── Request: attach JWT token ──────────────────────
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const t = localStorage.getItem('token');
@@ -22,6 +24,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ─── Response: handle 401 globally ──────────────────
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (
+      typeof window !== 'undefined' &&
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/auth/login')
+    ) {
+      // Session expired — clear credentials and redirect to login
+      localStorage.removeItem('token');
+      // Use native redirect to avoid importing Next.js router in a non-component file
+      const current = window.location.pathname;
+      window.location.href = `/login?from=${encodeURIComponent(current)}`;
+    }
+    return Promise.reject(error);
+  },
+);
 
 export function getApiErrorMessage(err: unknown): string {
   const ax = err as AxiosError<{ error?: { message?: string } }>;

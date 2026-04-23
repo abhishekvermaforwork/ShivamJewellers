@@ -1,42 +1,72 @@
 # InvoiceHub Web (Next.js)
 
-App Router + Tailwind CSS + Axios, aligned with the Django `base.html` layout (sidebar, Om Shivam Jewellers branding, blue primary actions).
+InvoiceHub is now fully migrated to Next.js App Router.
+The UI and API run in the same Next.js application:
 
-## Setup
+- UI routes live under `app/(auth)` and `app/(main)`.
+- API endpoints are handled by Next.js Route Handlers under `app/api/v1/[[...path]]`.
+- Legacy controller/service/model logic is reused via `server/` and dispatched through the route handler bridge.
 
-1. Copy `.env.local.example` to `.env.local` and set:
+## Local development
+
+1. Copy the environment template:
 
    ```bash
-   NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+   cp .env.local.example .env.local
    ```
 
-2. Run the API (`../backend`) on port 4000 (or change the URL).
-
-3. Install and dev:
+2. Install dependencies and run:
 
    ```bash
    npm install
    npm run dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000). Unauthenticated users are redirected to `/login`.
+3. Open [http://localhost:3000](http://localhost:3000).
 
-## Auth
+## Required environment variables
 
-- JWT is stored in `localStorage` (for Axios) and a readable `auth_token` cookie (for Next.js `middleware.ts` route protection).
-- Register and login call `POST /api/v1/auth/register` and `POST /api/v1/auth/login`.
+- `MONGO_URI` - MongoDB connection string
+- `JWT_SECRET` - JWT signing secret (must not use default in production)
+- `JWT_EXPIRES_IN` - token TTL (example: `7d`)
+- `NODE_ENV` - `development` or `production`
 
-## Structure
+Optional:
 
-| Path | Purpose |
-|------|---------|
-| `app/(auth)/` | Login & register |
-| `app/(main)/` | Shell layout + app pages |
-| `components/AppShell.tsx` | Sidebar, mobile drawer, logout |
-| `services/` | Axios client + domain calls |
-| `lib/session.ts` | Persist / clear session |
-| `middleware.ts` | Protect routes; redirect `/` |
+- `NEXT_PUBLIC_API_URL` - public API base URL override (defaults to same-origin `/api/v1`)
+- `INTERNAL_API_URL` - server-side API base URL override for SSR calls
 
-## Production
+## Production checklist
 
-Build with `npm run build` and run `npm start`. Set `NEXT_PUBLIC_API_URL` to your deployed API origin.
+1. Use a strong `JWT_SECRET`.
+2. Set `NODE_ENV=production`.
+3. Build and validate before deploy:
+
+   ```bash
+   npm run lint
+   npm run type-check
+   npm run build
+   ```
+
+4. Run:
+
+   ```bash
+   npm run start
+   ```
+
+5. Health endpoint:
+
+   ```text
+   GET /api/health
+   ```
+
+## Docker
+
+A multi-stage `Dockerfile` is included for production images (`next build` standalone output).
+
+Build and run:
+
+```bash
+docker build -t invoicehub-web .
+docker run -p 3000:3000 --env-file .env.local invoicehub-web
+```

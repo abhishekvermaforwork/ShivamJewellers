@@ -13,5 +13,6 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ invoice: 1, paymentDate: -1 });
+paymentSchema.index({ paymentDate: -1 });
 
 export const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema);
